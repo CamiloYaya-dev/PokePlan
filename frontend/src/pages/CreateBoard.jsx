@@ -1,11 +1,17 @@
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 export default function CreateBoard() {
     const [numCards, setNumCards] = useState(5);
     const [ownerVotes, setOwnerVotes] = useState(false);
     const [autoClose, setAutoClose] = useState(true);
     const [votes, setVotes] = useState([]);
+    const [boardCode, setBoardCode] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+    const [hiddenButton, setHiddenButton] = useState(null);
+
+    const navigate = useNavigate();
 
     const defaultScores = [0.5, 1, 2, 3, 5, 8, 13, 21, 34];
     const randomNames = ["MAX", "LEO", "ZOE", "LIA", "KAI", "SAM", "TOM", "LUC", "EVA", "NIA"];
@@ -22,6 +28,15 @@ export default function CreateBoard() {
             name = randomNames[Math.floor(Math.random() * randomNames.length)];
         } while (usedNames.includes(name));
         return name;
+    };
+
+    const generateBoardCode = () => {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let code = "";
+        for (let i = 0; i < 4; i++) {
+            code += chars[Math.floor(Math.random() * chars.length)];
+        }
+        return code;
     };
 
     useEffect(() => {
@@ -50,95 +65,144 @@ export default function CreateBoard() {
         });
     }, [ownerVotes]);
 
+    const handleCreateBoard = () => {
+        setBoardCode(generateBoardCode());
+        setShowModal(true);
+    };
+
+    const handleNavigation = (path, button) => {
+        setHiddenButton(button);
+        setTimeout(() => {
+            navigate(path);
+        }, 400);
+    };
+
     return (
         <div style={styles.container}>
-            {/* 1️⃣ Elegir cantidad de cartas */}
-            <h2 style={styles.title}>🃏 Crear Tablero</h2>
-            <p style={styles.subtitle}>Selecciona la cantidad de cartas:</p>
+            {!showModal ? (
+                <div>
+                    <h2 style={styles.title}>🃏 Crear Tablero</h2>
+                    <p style={styles.subtitle}>Selecciona la cantidad de cartas:</p>
 
-            <input
-                type="number"
-                min="2"
-                max={defaultScores.length}
-                value={numCards}
-                onChange={(e) => setNumCards(Number(e.target.value))}
-                style={styles.input}
-            />
-
-            {/* 2️⃣ Previsualización de cartas */}
-            <h3 style={styles.sectionTitle}>Previsualización de cartas</h3>
-            <div style={styles.previewContainer}>
-                <AnimatePresence>
-                    {cards.map((card) => (
-                        <motion.div
-                            key={card.id}
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{ duration: 0.3 }}
-                            style={styles.card}
-                        >
-                            {card.value}
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
-            </div>
-
-            {/* 3️⃣ Pregunta si el dueño vota */}
-            <div style={styles.checkboxContainer}>
-                <label>
                     <input
-                        type="checkbox"
-                        checked={ownerVotes}
-                        onChange={() => setOwnerVotes(!ownerVotes)}
+                        type="number"
+                        min="2"
+                        max={defaultScores.length}
+                        value={numCards}
+                        onChange={(e) => setNumCards(Number(e.target.value))}
+                        style={styles.input}
                     />
-                    &nbsp; ¿El dueño del tablero vota?
-                </label>
-            </div>
 
-            {/* 4️⃣ Previsualización de votación */}
-            <h3 style={styles.sectionTitle}>Previsualización de votación</h3>
-            <div style={styles.previewContainer}>
-                <AnimatePresence mode="sync">
-                    {votes.map((vote) => (
-                        <motion.div
-                            key={vote.id}
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
+                    <h3 style={styles.sectionTitle}>Previsualización de cartas</h3>
+                    <div style={styles.previewContainer}>
+                        <AnimatePresence>
+                            {cards.map((card) => (
+                                <motion.div
+                                    key={card.id}
+                                    initial={{ opacity: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.8 }}
+                                    transition={{ duration: 0.3 }}
+                                    style={styles.card}
+                                >
+                                    {card.value}
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                    </div>
+
+                    <div style={styles.checkboxContainer}>
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={ownerVotes}
+                                onChange={() => setOwnerVotes(!ownerVotes)}
+                            />
+                            &nbsp; ¿El dueño del tablero vota?
+                        </label>
+                    </div>
+
+                    <h3 style={styles.sectionTitle}>Previsualización de votación</h3>
+                    <div style={styles.previewContainer}>
+                        <AnimatePresence mode="sync">
+                            {votes.map((vote) => (
+                                <motion.div
+                                    key={vote.id}
+                                    initial={{ opacity: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.8 }}
+                                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                                    style={{
+                                        ...styles.card,
+                                        backgroundColor: vote.id === "👑 OWN" ? "#28a745" : "#ff9800",
+                                    }}
+                                >
+                                    {vote.value}
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                    </div>
+
+                    <div style={styles.checkboxContainer}>
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={autoClose}
+                                onChange={() => setAutoClose(!autoClose)}
+                            />
+                            &nbsp; ¿Cierre de votación automático?
+                        </label>
+                    </div>
+
+                    <h3 style={styles.sectionTitle}>Previsualización de resultados</h3>
+                    <div style={styles.previewContainer}>
+                        {autoClose ? <Results votes={votes} /> : <HiddenResults />}
+                    </div>
+                    <div className="button-container" style={styles.buttonContainer}>
+                        <AnimatePresence>
+                            <motion.button
+                                whileHover={{ scale: 1.1, backgroundColor: "#CED4DA" }}
+                                whileTap={{ scale: 0.9 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                transition={{ duration: 0.4 }}
+                                onClick={() => handleNavigation("/", "home")}
+                                style={{ ...styles.backButton, backgroundColor: "#ADB5BD" }}
+                            >
+                                Volver
+                            </motion.button>
+                        </AnimatePresence>
+                        <AnimatePresence>
+                            <motion.button
+                                whileHover={{ scale: 1.1, backgroundColor: "#218838" }}
+                                whileTap={{ scale: 0.9 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                transition={{ duration: 0.4 }}
+                                onClick={handleCreateBoard}
+                                style={{ ...styles.createButton, backgroundColor: "#28a745" }}
+                            >
+                                Entrar a Tablero
+                            </motion.button>
+                        </AnimatePresence>
+                    </div>
+                </div>
+            ) : (
+                <div>
+                    <h3>📌 Código del Tablero</h3>
+                    <p style={styles.code}>{boardCode}</p>
+                    <AnimatePresence>
+                        <motion.button
+                            whileHover={{ scale: 1.1, backgroundColor: "#CED4DA" }}
+                            whileTap={{ scale: 0.9 }}
                             exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                            style={{
-                                ...styles.card,
-                                backgroundColor: vote.id === "👑 OWN" ? "#28a745" : "#ff9800",
-                            }}
+                            transition={{ duration: 0.4 }}
+                            onClick={() => handleNavigation("/board", "board")}
+                            style={{ ...styles.backButton, backgroundColor: "#ADB5BD" }}
                         >
-                            {vote.value}
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
-            </div>
-
-            {/* 5️⃣ Opción de cierre automático */}
-            <div style={styles.checkboxContainer}>
-                <label>
-                    <input
-                        type="checkbox"
-                        checked={autoClose}
-                        onChange={() => setAutoClose(!autoClose)}
-                    />
-                    &nbsp; ¿Cierre de votación automático?
-                </label>
-            </div>
-
-            {/* 6️⃣ Previsualización de la visibilidad de resultados */}
-            <h3 style={styles.sectionTitle}>Previsualización de resultados</h3>
-            <div style={styles.previewContainer}>
-                {autoClose ? (
-                    <Results votes={votes} />
-                ) : (
-                    <HiddenResults />
-                )}
-            </div>
+                            Ir al Tablero
+                        </motion.button>
+                    </AnimatePresence>
+                </div>
+            )}
         </div>
     );
 }
@@ -164,18 +228,9 @@ const Results = ({ votes }) => (
 );
 
 const HiddenResults = () => (
-    <AnimatePresence mode="wait">
-        <motion.div
-            key="hidden-results"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
-            style={styles.hiddenResults}
-        >
-            🔒 Resultados ocultos hasta que el dueño los revele
-        </motion.div>
-    </AnimatePresence>
+    <motion.div style={styles.hiddenResults}>
+        🔒 Resultados ocultos hasta que el dueño los revele
+    </motion.div>
 );
 
 const styles = {
@@ -251,4 +306,56 @@ const styles = {
         gap: "10px",
         marginTop: "10px",
     },
+    modal: {
+        background: "#fff",
+        padding: "20px",
+        borderRadius: "10px",
+        boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.2)",
+        textAlign: "center",
+        width: "300px"
+    },
+    modalOverlay: {
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        background: "rgba(0, 0, 0, 0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    createButton: {
+        marginTop: "20px",
+        padding: "10px",
+        fontSize: "16px",
+        fontWeight: "bold",
+        cursor: "pointer",
+        backgroundColor: "#28a745",
+        color: "white",
+        border: "none",
+        borderRadius: "5px",
+
+    },
+    backButton: {
+        marginTop: "20px",
+        padding: "10px",
+        fontSize: "16px",
+        fontWeight: "bold",
+        cursor: "pointer",
+        backgroundColor: "#007bff",
+        color: "white",
+        border: "none",
+        borderRadius: "5px",
+    },
+    code: {
+        fontSize: "24px",
+        fontWeight: "bold",
+        color: "#007bff"
+    },
+    buttonContainer: {
+        display: "inline-flex",
+        justifyContent: "space-between",
+        gap: "25px",
+    }
 };
