@@ -1,10 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:3000");
 
 export default function Board() {
     const { code } = useParams(); // Obtiene el código de la URL
     const navigate = useNavigate();
+    const socketRef = useRef(null);  // ⚡ Usamos useRef para evitar cambios en cada render
+
     const [name, setName] = useState("");
     const [selectedIcon, setSelectedIcon] = useState("😊");
     const [confirmed, setConfirmed] = useState(false);
@@ -20,40 +25,44 @@ export default function Board() {
 
     // Cartas disponibles para votar (data quemada, pero escalable)
     const [cards, setCards] = useState([0.5, 1, 2, 3, 5]);
-
-    const icons = ["😊", "🚀", "🐱", "🎮", "⚡", "🔥", "👑", "🤖", "🎨", "💡"];
-
-    const handleConfirm = () => {
-        if (name.trim() !== "") {
-            setConfirmed(true);
-            setPlayers((prev) => [...prev, { id: prev.length + 1, name, icon: selectedIcon }]);
-        }
-    };
-
     const [selectedCard, setSelectedCard] = useState(null);
     const [playersVotes, setPlayersVotes] = useState({});
     const [showResults, setShowResults] = useState(false);
 
-    const handleVote = (card) => {
-        if (!showResults) { // Solo permite votar si los resultados no han sido revelados
-            setSelectedCard(card);
-            setPlayersVotes((prev) => ({
-                ...prev,
-                [name]: card, // Tu voto
-            }));
+    const icons = ["😊", "🚀", "🐱", "🎮", "⚡", "🔥", "👑", "🤖", "🎨", "💡"];
+
+    useEffect(() => {
+        if (!socketRef.current) {
+            socketRef.current = io("http://localhost:3000");
         }
-    };
 
-    const revealVotes = () => {
-        setShowResults(true);
-    };
+        return () => {
+            socketRef.current.disconnect();
+            socketRef.current = null;
+        };
+    }, []);
 
-    const resetBoard = () => {
-        setSelectedCard(null);
-        setPlayersVotes({});
-        setShowResults(false);
-    };
+    // 🔹 Unirse al tablero y recibir actualizaciones
+    useEffect(() => {
+        if (!socketRef.current) return;
 
+        const socket = socketRef.current;
+
+        const handleBoardUpdate = (data) => {
+            setPlayers(data.players || []);
+            setPlayersVotes(data.playersVotes || {});
+            setShowResults(data.showResults || false);
+        };
+
+        socket.emit("joinBoard", code);
+        socket.on("boardUpdated", handleBoardUpdate);
+
+        return () => {
+            socket.off("boardUpdated", handleBoardUpdate);
+        };
+    }, [code]);
+
+    // 🔹 Validar si el tablero existe
     useEffect(() => {
         const validateBoard = async () => {
             try {
@@ -64,30 +73,71 @@ export default function Board() {
                 }
 
                 const data = await response.json();
-
                 const storedOwners = JSON.parse(localStorage.getItem("owners") || "[]");
 
-                // Verificar si el owner del tablero está en la lista de owners guardados en el localStorage
                 if (Array.isArray(storedOwners) && storedOwners.includes(data.tablero.owner)) {
                     setIsBoardOwner(true);
                 }
-                console.log(isBoardOwner);
-                console.log(Array.isArray(storedOwners));
-                console.log(storedOwners.includes(data.tablero.owner));
-                console.log(data.tablero.owner);
-                console.log(storedOwners);
-                setIsValidBoard(true);
 
-                console.log("Tablero encontrado:", data);
+                setIsValidBoard(true);
             } catch (err) {
                 console.error("Error:", err.message);
-                navigate("/"); // Redirige a la página de inicio si el tablero no existe
+                navigate("/");
             }
         };
 
         validateBoard();
     }, [code, navigate]);
 
+    // 🔹 Manejo de eventos con socket
+    const handleConfirm = () => {
+        if (name.trim() !== "") {
+            const updatedPlayers = [...players, { id: players.length + 1, name, icon: selectedIcon }];
+            setPlayers(updatedPlayers);
+            setConfirmed(true);
+
+            socketRef.current?.emit("updateBoard", code, {
+                players: updatedPlayers,
+                playersVotes,
+                showResults,
+            });
+        }
+    };
+
+    const handleVote = (card) => {
+        if (!showResults) {
+            setSelectedCard(card);
+            const updatedVotes = { ...playersVotes, [name]: card };
+            setPlayersVotes(updatedVotes);
+
+            socketRef.current?.emit("updateBoard", code, {
+                players,
+                playersVotes: updatedVotes,
+                showResults,
+            });
+        }
+    };
+
+    const revealVotes = () => {
+        setShowResults(true);
+        socketRef.current?.emit("updateBoard", code, {
+            players,
+            playersVotes,
+            showResults: true,
+        });
+    };
+
+    const resetBoard = () => {
+        setSelectedCard(null);
+        setPlayersVotes({});
+        setShowResults(false);
+
+        socketRef.current?.emit("updateBoard", code, {
+            players,
+            playersVotes: {},
+            showResults: false,
+        });
+    };
 
     if (isValidBoard === null) {
         return (

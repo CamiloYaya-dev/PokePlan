@@ -1,8 +1,17 @@
 const express = require('express');
 const cors = require('cors');
-const { db, initializeDB } = require('./db'); // Importa la inicialización de la BD
+const { db, initializeDB } = require('./db'); 
+const { createServer } = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
+const server = createServer(app); // Crear servidor HTTP
+const io = new Server(server, {
+    cors: {
+        origin: "http://localhost:5173", // Asegúrate de que este es el frontend
+        methods: ["GET", "POST"]
+    }
+});
 app.use(cors());
 app.use(express.json());
 
@@ -49,7 +58,24 @@ app.get('/api/tablero/:code', (req, res) => {
     }
 });
 
+io.on("connection", (socket) => {
+    console.log(`🟢 Cliente conectado: ${socket.id}`);
+
+    socket.on("joinBoard", (boardCode) => {
+        socket.join(boardCode);
+        console.log(`Cliente ${socket.id} se unió al tablero ${boardCode}`);
+    });
+
+    socket.on("updateBoard", (boardCode, data) => {
+        io.to(boardCode).emit("boardUpdated", data);
+    });
+
+    socket.on("disconnect", () => {
+        console.log(`🔴 Cliente desconectado: ${socket.id}`);
+    });
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
