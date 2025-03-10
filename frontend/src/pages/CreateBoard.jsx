@@ -65,9 +65,41 @@ export default function CreateBoard() {
         });
     }, [ownerVotes]);
 
-    const handleCreateBoard = () => {
-        setBoardCode(generateBoardCode());
+    const handleCreateBoard = async () => {
+        const codigoGenerado = generateBoardCode();
+        setBoardCode(codigoGenerado);
         setShowModal(true);
+
+        const ownerHash = crypto.randomUUID(); // Generar un hash único para el dueño
+
+        try {
+            const response = await fetch('http://localhost:3000/api/tablero', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    numCards,
+                    code: codigoGenerado,
+                    ownerVotes,
+                    autoClose,
+                    owner: ownerHash
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al crear el tablero');
+            }
+
+            // Obtener la lista actual de owners desde localStorage
+            const storedOwners = JSON.parse(localStorage.getItem('owners')) || [];
+
+            // Agregar el nuevo owner y guardar en localStorage
+            storedOwners.push(ownerHash);
+            localStorage.setItem('owners', JSON.stringify(storedOwners));
+
+            console.log('Tablero guardado en la base de datos y owner registrado.');
+        } catch (error) {
+            console.error(error.message);
+        }
     };
 
     const handleNavigation = (path, button) => {
@@ -195,7 +227,7 @@ export default function CreateBoard() {
                             whileTap={{ scale: 0.9 }}
                             exit={{ opacity: 0, scale: 0.8 }}
                             transition={{ duration: 0.4 }}
-                            onClick={() => handleNavigation("/board", "board")}
+                            onClick={() => handleNavigation(`/board/${boardCode}`, "board")}
                             style={{ ...styles.backButton, backgroundColor: "#ADB5BD" }}
                         >
                             Ir al Tablero

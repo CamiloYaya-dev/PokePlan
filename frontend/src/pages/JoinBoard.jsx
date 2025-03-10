@@ -5,14 +5,31 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function JoinBoard() {
     const [boardCode, setBoardCode] = useState("");
     const [error, setError] = useState(false);
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    const handleJoinBoard = () => {
-        if (boardCode.trim() === "" || boardCode.length != 4) {
-            setError(true);
+    const handleJoinBoard = async () => {
+        if (boardCode.trim() === "" || boardCode.length !== 4) {
+            setError("⚠ Ingresa un código válido.");
             return;
         }
-        navigate(`/board/${boardCode}`);
+
+        setLoading(true);
+
+        try {
+            const response = await fetch(`http://localhost:3000/api/tablero/${boardCode}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Error en la validación del tablero");
+            }
+
+            navigate(`/board/${boardCode}`);
+        } catch (err) {
+            setError("❌ Tablero no encontrado.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -58,6 +75,7 @@ export default function JoinBoard() {
                     whileTap={{ scale: 0.95 }}
                     onClick={handleJoinBoard}
                     style={styles.joinButton}
+                    disabled={loading}
                 >
                     ➡ Unirse al Tablero
                 </motion.button>

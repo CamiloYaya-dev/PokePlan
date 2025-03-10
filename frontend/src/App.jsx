@@ -12,7 +12,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/create" element={<CreateBoard />} />
           <Route path="/join" element={<JoinBoard />} />
-          <Route path="/board/:id" element={<Board />} />
+          <Route path="/board/:code" element={<Board />} />
         </Routes>
       </div>
     </Router>

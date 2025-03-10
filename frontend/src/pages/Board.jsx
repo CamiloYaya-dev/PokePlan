@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Board() {
+    const { code } = useParams(); // Obtiene el código de la URL
+    const navigate = useNavigate();
     const [name, setName] = useState("");
     const [selectedIcon, setSelectedIcon] = useState("😊");
     const [confirmed, setConfirmed] = useState(false);
+    const [isValidBoard, setIsValidBoard] = useState(null);
+    const [isBoardOwner, setIsBoardOwner] = useState(false); // Estado para verificar si es dueño
 
     // Lista de jugadores (data quemada)
     const [players, setPlayers] = useState([
@@ -48,6 +53,49 @@ export default function Board() {
         setPlayersVotes({});
         setShowResults(false);
     };
+
+    useEffect(() => {
+        const validateBoard = async () => {
+            try {
+                const response = await fetch(`http://localhost:3000/api/tablero/${code}`);
+
+                if (!response.ok) {
+                    throw new Error("Tablero no encontrado" + code);
+                }
+
+                const data = await response.json();
+
+                const storedOwners = JSON.parse(localStorage.getItem("owners") || "[]");
+
+                // Verificar si el owner del tablero está en la lista de owners guardados en el localStorage
+                if (Array.isArray(storedOwners) && storedOwners.includes(data.tablero.owner)) {
+                    setIsBoardOwner(true);
+                }
+                console.log(isBoardOwner);
+                console.log(Array.isArray(storedOwners));
+                console.log(storedOwners.includes(data.tablero.owner));
+                console.log(data.tablero.owner);
+                console.log(storedOwners);
+                setIsValidBoard(true);
+
+                console.log("Tablero encontrado:", data);
+            } catch (err) {
+                console.error("Error:", err.message);
+                navigate("/"); // Redirige a la página de inicio si el tablero no existe
+            }
+        };
+
+        validateBoard();
+    }, [code, navigate]);
+
+
+    if (isValidBoard === null) {
+        return (
+            <div style={styles.loadingContainer}>
+                <h2>🔄 Verificando tablero...</h2>
+            </div>
+        );
+    }
 
     return (
         <div style={styles.container}>
@@ -150,7 +198,7 @@ export default function Board() {
                                 </motion.div>
                             ))}
                         </div>
-                        {selectedCard && !showResults && (
+                        {isBoardOwner && selectedCard && !showResults && (
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
@@ -180,7 +228,7 @@ export default function Board() {
                                 ))}
                             </motion.div>
                         )}
-                        {showResults && (
+                        {isBoardOwner && showResults && (
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
