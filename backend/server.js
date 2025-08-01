@@ -19,7 +19,7 @@ app.use(express.json());
 initializeDB();
 
 app.get('/', (req, res) => {
-    res.send('Bienvenido a MeliVote API');
+    res.send('Bienvenido a PokePlan API');
 });
 
 app.post('/api/tablero', (req, res) => {
