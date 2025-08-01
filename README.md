@@ -68,7 +68,7 @@ npm run dev
 
 ```mermaid
 graph TD
-  A[Cliente - Navegador Web] -->|HTTP (REST)| B[Frontend]
+  A[Cliente - Navegador Web] -->|HTTP| B[Frontend]
   B -->|Fetch API| C[Backend]
   C -->|Consulta SQL| D[(SQLite en Memoria)]
 
