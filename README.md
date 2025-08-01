@@ -64,6 +64,35 @@ npm run dev
 
 ---
 
+## Arquitectura
+
+```mermaid
+graph TD
+  A[Cliente - Navegador Web] -->|HTTP (REST)| B[Frontend]
+  B -->|Fetch API| C[Backend]
+  C -->|Consulta SQL| D[(SQLite en Memoria)]
+
+  A -- WebSocket --> E[Socket.IO Cliente]
+  E -- WS --> F[Socket.IO Servidor]
+
+  F -->|Emit| G[Otros Clientes Conectados]
+  C -->|Inicializa y gestiona| D
+
+  subgraph Frontend
+    B
+    E
+  end
+
+  subgraph Backend
+    C
+    F
+    D
+  end
+
+```
+
+---
+
 ## 📦 Tecnologías usadas
 
 ### Backend
